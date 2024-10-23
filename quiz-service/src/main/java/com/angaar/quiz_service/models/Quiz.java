@@ -5,6 +5,8 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 import com.angaar.quiz_service.models.Section;
 
+import jakarta.persistence.PrePersist;
+
 import java.util.List;
 
 @Document(collection = "quizzes")
@@ -16,12 +18,15 @@ public class Quiz {
     private Metadata metadata;
     private List<Section> sections;
 
-    public Quiz() {}
+    public Quiz() {
+        generateId();
+    }
 
-    public Quiz(String title, String quizid, Metadata metadata, List<Section> sections) {
+    public Quiz(String title, Metadata metadata, List<Section> sections) {
         this.title = title;
         this.metadata = metadata;
         this.sections = sections;
+        generateId(); 
     }
 
     // Getters and Setters
@@ -56,11 +61,16 @@ public class Quiz {
     public void setSections(List<Section> sections) {
         this.sections = sections;
     }
+    
+    public void generateId() {
+        if (this.id == null) {
+            this.id = "RQ_" + java.util.UUID.randomUUID().toString().substring(0, 8);
+        }
+    }
 
     // Inner Metadata class
     public static class Metadata {
         private String author;
-        private Entitlement entitlement;
         private String description;
         private String creationDate;
 
@@ -97,20 +107,7 @@ public class Quiz {
             this.creationDate = creationDate;
         }
         
-        public Entitlement getEntitlement() {
-        	return this.entitlement;
-        }
-        
-        public void setEntitlement(Entitlement entitlement) {
-        	this.entitlement = entitlement;
-        }
     }
 
     
-    public static class Entitlement{
-    	private String [] owner;
-    	private String [] readOnly;
-    	private String [] readWrite;
-    }
-        
 }
