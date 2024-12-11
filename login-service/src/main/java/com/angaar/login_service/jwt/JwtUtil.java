@@ -114,7 +114,7 @@ public class JwtUtil {
         if (cookies != null) {
         	System.out.println("Found cookifes " + request.getCookies());
             for (Cookie cookie : cookies) {
-            	System.out.println("cooke: " + cookie.getName());
+            	System.out.println("cooke2: " + cookie.getName());
                 if ("JWT_TOKEN".equals(cookie.getName())) {
                     return cookie.getValue();
                 }

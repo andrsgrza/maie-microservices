@@ -1,7 +1,7 @@
 package com.angaar.quiz_service.models.entitlements;
 
 public enum Role {
-	READ_ONLY(1), READ_WRITE(2), OWNER(3);
+	OWNER(3), READ_WRITE(2), READ_ONLY(1);
 
     private final int priority;
 

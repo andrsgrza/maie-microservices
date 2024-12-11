@@ -19,50 +19,89 @@ import java.util.Optional;
 
 @Service
 public class QuizService {
+
     @Autowired
     private QuizRepository quizRepository;
+
     @Autowired
     private ResourceEntitlementService resourceService;
     
-    public void getQuizzesForUser(String userId) {
-    	
-    	Map<String, Role> entitlementMap= resourceService.findQuizzesEntitledByUser(userId);
-    	entitlementMap.forEach((resourceId, role) -> {
-            System.out.println("Resource: " + resourceId + ", Highest Role: " + role);
-        });
-        
-        
+    @Autowired
+    private QuizEntitlementStrategyFactory strategyFactory;
+    
+    
+    public List<Object> getAllQuizzesForUser(String userId) {
+        // Retrieve all resource entitlements for the user
+        List<ResourceEntitlement> entitlements = resourceService.getResourcesForTarget(ResourceType.QUIZ, TargetType.USER, userId);
+        if(entitlements == null) {
+        	return null;
+        }
+        List<Object> quizzesWithEntitlement = new ArrayList<>();
+
+        for (ResourceEntitlement entitlement : entitlements) {
+            // Retrieve the quiz by its ID
+            Optional<Quiz> quizOpt = quizRepository.findById(entitlement.getResourceId());
+
+            if (quizOpt.isPresent()) {
+                Quiz quiz = quizOpt.get();
+
+                // Call the static method from the factory directly
+                QuizEntitlementStrategy strategy = strategyFactory.getStrategy(userId, entitlement);
+
+                // Map the quiz to the appropriate DTO and include the user's role
+                Object quizDto = strategy.mapToDto(quiz);
+
+                // Add the DTO and role info to the response
+                quizzesWithEntitlement.add(quizDto);
+            }
+        }
+
+        return quizzesWithEntitlement;
     }
 
-    public List<Quiz> getAllQuizzes() {
-        return quizRepository.findAll();
-    }
+
+//    public List<Quiz> getAllQuizzes( String userId) {
+//    	resourceService.getResourcesForTarget(userId);
+//        return quizRepository.findAll();
+//    }
 
     public Optional<Quiz> getQuizById(String id) {
         return quizRepository.findById(id);
     }
 
     public Quiz createQuiz(Quiz quiz, String ownerId) {
-    	System.out.println("CREATING QUIZZ");
-    	Quiz.Metadata meta = quiz.getMetadata();
-    	meta.setCreationDate(LocalDate.now().toString());
-    	quiz.setMetadata(meta);
-    	Quiz savedQuiz = quizRepository.save(quiz);
-    	resourceService.assignRole(ownerId, ResourceType.QUIZ, quiz.getId(), TargetType.USER, Role.OWNER, false);
-    	System.out.println("The received id: " + ownerId);
-    	//QuizEntitlementStrategyFactory
-    	//resourceService.assignRole(null, null, null, null, null, false);
+        // The user creating the quiz will be assigned as the OWNER
+        Quiz.Metadata meta = quiz.getMetadata();
+        meta.setCreationDate(LocalDate.now().toString());
+        quiz.setMetadata(meta);
+        Quiz savedQuiz = quizRepository.save(quiz);
+
+        // Assign the owner role to the user for the created quiz
+        resourceService.assignRole(ownerId, ResourceType.QUIZ, quiz.getId(), TargetType.USER, Role.OWNER, false);
+
         return savedQuiz;
     }
 
-    public void deleteQuiz(String id) {
+    public void deleteQuiz(String id, String userId) {
+        // Check if the user has permission to delete this quiz (OWNER or READ_WRITE role)
+        boolean hasPermission = resourceService.hasPermission(userId, ResourceType.QUIZ, id, Role.OWNER);
+
+        if (!hasPermission) {
+            throw new RuntimeException("User does not have permission to delete this quiz");
+        }
+
         quizRepository.deleteById(id);
     }
 
-    public Quiz updateQuiz(String id, Quiz quizDetails) {
-        // Use Optional to find the quiz, throwing an exception if it's not found
-        Quiz quiz = quizRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Quiz not found"));
+    public Quiz updateQuiz(String id, Quiz quizDetails, String userId) {
+        // Check if the user has permission to update this quiz (OWNER or READ_WRITE role)
+        boolean hasPermission = resourceService.hasPermission(userId, ResourceType.QUIZ, id, Role.READ_WRITE);
+
+        if (!hasPermission) {
+            throw new RuntimeException("User does not have permission to update this quiz");
+        }
+
+        Quiz quiz = quizRepository.findById(id).orElseThrow(() -> new RuntimeException("Quiz not found"));
 
         // Update quiz fields
         quiz.setTitle(quizDetails.getTitle());

@@ -12,6 +12,7 @@ import com.angaar.quiz_service.models.entitlements.TargetType;
 public interface ResourceEntitlementRepository extends JpaRepository<ResourceEntitlement, String>{
 	Optional<ResourceEntitlement> findByResourceTypeAndResourceIdAndTargetTypeAndTargetId(ResourceType resourceType, String resourceId, TargetType targetType, String targetId);    
     List<ResourceEntitlement> findByTargetTypeAndTargetId(TargetType targetType, String targetId);
-    List<ResourceEntitlement> findByResourceTypeAndTargetTypeAndTargetId(ResourceType resourceType, String resourceId, TargetType targetType);
+    List<ResourceEntitlement> findByResourceTypeAndTargetTypeAndTargetId(ResourceType resourceType, TargetType targetType, String targetId);
+    List<ResourceEntitlement> findByResourceIdAndResourceType(String resourceId, ResourceType resourceType);
     
 }

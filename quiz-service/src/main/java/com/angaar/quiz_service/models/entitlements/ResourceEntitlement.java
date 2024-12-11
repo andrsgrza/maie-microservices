@@ -93,4 +93,16 @@ public class ResourceEntitlement {
     public void prePersist() {
     	this.id = "ENT_" + java.util.UUID.randomUUID().toString().substring(0, 8);
 	}
+    @Override
+    public String toString() {
+        return "ResourceEntitlement{" +
+               "id='" + id + '\'' +
+               ", resourceType=" + resourceType +
+               ", resourceId='" + resourceId + '\'' +
+               ", targetType=" + targetType +
+               ", targetId='" + targetId + '\'' +
+               ", role=" + role +
+               '}';
+    }
+
 }

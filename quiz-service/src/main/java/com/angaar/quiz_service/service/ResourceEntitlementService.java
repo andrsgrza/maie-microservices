@@ -9,6 +9,8 @@ import com.angaar.quiz_service.models.entitlements.Role;
 import com.angaar.quiz_service.models.entitlements.TargetType;
 import com.angaar.quiz_service.repositories.ResourceEntitlementRepository;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -22,8 +24,10 @@ public class ResourceEntitlementService {
     @Autowired
     private ResourceEntitlementRepository resourceEntitlementRepository;
     
-    public List<ResourceEntitlement> getResourcesForTarget(String userId) {
-    	List<ResourceEntitlement> resourceList = resourceEntitlementRepository.findByTargetTypeAndTargetId(null, userId);
+    public List<ResourceEntitlement> getResourcesForTarget(ResourceType resourceType, TargetType targetType, String resourceId) {
+    	System.out.println("resourceType\t"+resourceType+"\t targetType\t"+resourceType + "\t resouuceId \t" + resourceId);
+    	List<ResourceEntitlement> resourceList = resourceEntitlementRepository.findByResourceTypeAndTargetTypeAndTargetId(resourceType, targetType, resourceId);
+    	
     	if(!resourceList.isEmpty()) {
     		return resourceList;
     	}
@@ -104,15 +108,30 @@ public class ResourceEntitlementService {
     		return userEntitlement.get();
     	}
     }
-    public Map<String, Role> findQuizzesEntitledByUser(String userId) {    	
-    	List<ResourceEntitlement> userEntitlements = resourceEntitlementRepository
-    			.findByResourceTypeAndTargetTypeAndTargetId(ResourceType.QUIZ, userId, TargetType.USER);
-    	if(userEntitlements.isEmpty()) {
-    		return null;
-    	} else {
-    		Map<String, Role> entitlementMap = getHighestRoleByResource(userEntitlements);
-    		return entitlementMap;
+    public Map<Role, List<String>>findEntitlementsForQuiz(String quizId) {
+    	////TODO: CHECK FOR USER WHO REQUESTED IT: SHOUDL BE OWNER
+    	List<ResourceEntitlement> resourceList = resourceEntitlementRepository.findByResourceIdAndResourceType(quizId, ResourceType.QUIZ);
+    	if(resourceList.isEmpty()) {
+    		throw new Error("Entitlement for quiz " + quizId + " can not be empty");
     	}
+    	Map<Role, List<String>> roleToTargetIds = new HashMap<>();
+    	for (ResourceEntitlement entitlement : resourceList) {
+    		Role role = entitlement.getRole();
+    		String targetId = entitlement.getTargetId();
+    		// Get the list of targetIds for the role, or create a new one if it doesn't exist
+    		roleToTargetIds.computeIfAbsent(role, k -> new ArrayList<>()).add(targetId);
+		}
+    	return roleToTargetIds;
     }
+//    public Map<String, Role> findQuizzesEntitledByUser(String userId) {    	
+//    	List<ResourceEntitlement> userEntitlements = resourceEntitlementRepository
+//    			.findByResourceTypeAndTargetTypeAndTargetId(ResourceType.QUIZ, userId, TargetType.USER);
+//    	if(userEntitlements.isEmpty()) {
+//    		return null;
+//    	} else {
+//    		Map<String, Role> entitlementMap = getHighestRoleByResource(userEntitlements);
+//    		return entitlementMap;
+//    	}
+//    }
     
 }

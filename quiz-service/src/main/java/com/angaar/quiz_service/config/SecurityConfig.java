@@ -21,14 +21,18 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http.csrf().disable()
-            .authorizeHttpRequests()
-            .requestMatchers("/api/quizzes/**").authenticated() // Protect quiz endpoints
-            .anyRequest().permitAll()
+        http
+            .cors()  // Enable CORS
             .and()
-            .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);
+            .csrf(csrf -> csrf.disable())  // Disable CSRF if not required for cookies in the current setup
+            .authorizeHttpRequests()
+            .requestMatchers("/api/quizzes/**").authenticated()  // Protect all quiz endpoints
+            .requestMatchers("/api/resource-entitlement/**").authenticated()  // Protect resource-entitlement
+            .anyRequest().permitAll()  // Allow all other requests without authentication
+            .and()
+            .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);  // Stateless for JWT
 
-        // Add the JWT filter before the UsernamePasswordAuthenticationFilter
+        // Add JWT filter to process authentication before UsernamePasswordAuthenticationFilter
         http.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

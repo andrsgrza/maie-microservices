@@ -1,15 +1,21 @@
 package com.angaar.quiz_service.service.strategy;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
 import com.angaar.quiz_service.models.entitlements.ResourceEntitlement;
 import com.angaar.quiz_service.models.entitlements.Role;
 
+@Service
 public class QuizEntitlementStrategyFactory {
+	@Autowired
+	public OwnerQuizStrategy ownerStrategy;
 
-    public static QuizEntitlementStrategy getStrategy(String userId, ResourceEntitlement entitlement) {
+    public QuizEntitlementStrategy getStrategy(String userId, ResourceEntitlement entitlement) {
 
         // Check if the user is an owner
         if (entitlement.getRole() != null && entitlement.getRole() == Role.OWNER) {
-            return new OwnerQuizStrategy();
+            return ownerStrategy;
         }
 
         // Check if the user has read-only access
