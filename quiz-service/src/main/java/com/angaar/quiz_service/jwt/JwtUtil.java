@@ -71,12 +71,14 @@ public class JwtUtil {
     public String getTokenFromCookies(HttpServletRequest request) {
     	System.out.println("parsing request");
         Cookie[] cookies = request.getCookies();
+        System.out.println("Cookies: " + request.getCookies());
         
         if (cookies != null) {
         	System.out.println("Found cookifes " + request.getCookies());
             for (Cookie cookie : cookies) {
             	System.out.println("cooke: " + cookie.getName());
                 if ("JWT_TOKEN".equals(cookie.getName())) {
+                	System.out.println(("Cookie value"));
                     return cookie.getValue();
                 }
             }

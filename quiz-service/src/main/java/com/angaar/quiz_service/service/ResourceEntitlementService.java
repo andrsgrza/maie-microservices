@@ -1,7 +1,10 @@
 package com.angaar.quiz_service.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
 
 import com.angaar.quiz_service.models.entitlements.ResourceEntitlement;
 import com.angaar.quiz_service.models.entitlements.ResourceType;
@@ -9,6 +12,8 @@ import com.angaar.quiz_service.models.entitlements.Role;
 import com.angaar.quiz_service.models.entitlements.TargetType;
 import com.angaar.quiz_service.repositories.ResourceEntitlementRepository;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -22,8 +27,16 @@ public class ResourceEntitlementService {
     @Autowired
     private ResourceEntitlementRepository resourceEntitlementRepository;
     
-    public List<ResourceEntitlement> getResourcesForTarget(String userId) {
-    	List<ResourceEntitlement> resourceList = resourceEntitlementRepository.findByTargetTypeAndTargetId(null, userId);
+    @Autowired
+    private RestTemplate restTemplate;
+
+    @Value("${user.service.baseUrl}")
+    private String userServiceBaseUrl;
+    
+    public List<ResourceEntitlement> getResourcesForTarget(ResourceType resourceType, TargetType targetType, String resourceId) {
+    	System.out.println("resourceType\t"+resourceType+"\t targetType\t"+resourceType + "\t resouuceId \t" + resourceId);
+    	List<ResourceEntitlement> resourceList = resourceEntitlementRepository.findByResourceTypeAndTargetTypeAndTargetId(resourceType, targetType, resourceId);
+    	
     	if(!resourceList.isEmpty()) {
     		return resourceList;
     	}
@@ -68,7 +81,7 @@ public class ResourceEntitlementService {
         return userRole == Role.READ_ONLY && requiredRole == Role.READ_ONLY;
     }
 
-    public ResourceEntitlement assignRole(String userId, ResourceType resourceType, String resourceId, TargetType targetType, Role role, boolean overwrite) {
+    private ResourceEntitlement assignRole(String userId, ResourceType resourceType, String resourceId, TargetType targetType, Role role, boolean overwrite) {
         String targetId = targetType == TargetType.USER ? userId : GLOBAL_TARGET_ID;
 
         // Check if an entitlement already exists
@@ -83,6 +96,7 @@ public class ResourceEntitlementService {
             	System.out.println("Overwrite is true. Existin entitlement " + existingEntitlement.get() + " has been removed.");
             } else {
                 System.out.println("Overwrite is false. Not assigning new entitlement");
+                return existingEntitlement.get();
             }
         }
 
@@ -95,6 +109,31 @@ public class ResourceEntitlementService {
         entitlement.setRole(role);
         return resourceEntitlementRepository.save(entitlement);
     }
+    
+    private boolean removeRole(String userId, ResourceType resourceType, String resourceId, TargetType targetType, Role role) {
+        String targetId = targetType == TargetType.USER ? userId : GLOBAL_TARGET_ID;
+
+        // Check if an entitlement exists
+        Optional<ResourceEntitlement> entitlementToRemove = resourceEntitlementRepository
+            .findByResourceTypeAndResourceIdAndTargetTypeAndTargetId(resourceType, resourceId, targetType, targetId);
+
+        if (entitlementToRemove.isPresent()) {
+        	System.out.println("An entitlement on the selected target, for the selected resource already exists");
+        	resourceEntitlementRepository.delete(entitlementToRemove.get());
+        	return true;
+        }
+        return false;
+    }
+    public ResourceEntitlement assignUserRoleToQuiz(String userId, String quizId, Role role) {
+    	return assignRole(userId, ResourceType.QUIZ, quizId, TargetType.USER, role, true);
+    }
+    
+    @Transactional
+    public void removeUserRoleFromQuiz(String userId, String quizId, Role role) {
+        resourceEntitlementRepository.deleteByResourceIdAndTargetIdAndRole(quizId, userId, role);
+    }
+
+    
     public ResourceEntitlement findUserEntitlementsOnQuiz(String userId, String quizId) {    	
     	Optional<ResourceEntitlement> userEntitlement = resourceEntitlementRepository
     			.findByResourceTypeAndResourceIdAndTargetTypeAndTargetId(ResourceType.QUIZ, quizId, TargetType.USER, userId);
@@ -104,15 +143,72 @@ public class ResourceEntitlementService {
     		return userEntitlement.get();
     	}
     }
-    public Map<String, Role> findQuizzesEntitledByUser(String userId) {    	
-    	List<ResourceEntitlement> userEntitlements = resourceEntitlementRepository
-    			.findByResourceTypeAndTargetTypeAndTargetId(ResourceType.QUIZ, userId, TargetType.USER);
-    	if(userEntitlements.isEmpty()) {
-    		return null;
-    	} else {
-    		Map<String, Role> entitlementMap = getHighestRoleByResource(userEntitlements);
-    		return entitlementMap;
-    	}
+
+    public Map<Role, List<Map<String, String>>> findEntitlementsForQuiz(String quizId) {
+        List<ResourceEntitlement> resourceList = resourceEntitlementRepository.findByResourceIdAndResourceType(quizId, ResourceType.QUIZ);
+        if (resourceList.isEmpty()) {
+            throw new Error("Entitlement for quiz " + quizId + " cannot be empty");
+        }
+
+        // Extract userIds
+        List<String> userIds = resourceList.stream()
+            .map(ResourceEntitlement::getTargetId)
+            .distinct()
+            .collect(Collectors.toList());
+
+        // Fetch usernames via User Service
+        String url = userServiceBaseUrl + "/api/user/batch";
+        Map<String, String> userIdToUsername = restTemplate.postForObject(url, userIds, Map.class);
+
+        // Map roles to user details
+        Map<ResourceEntitlement, String> entitlementToUsername = new HashMap<>();
+        Map<Role, List<Map<String, String>>> roleToUsers = new HashMap<>();
+        for (ResourceEntitlement entitlement : resourceList) {
+        	
+            Role role = entitlement.getRole();
+            String userId = entitlement.getTargetId();
+            String username = userIdToUsername.getOrDefault(userId, "Unknown");
+            entitlementToUsername.put(entitlement, username);
+            Map<String, String> userMap = new HashMap<>();
+            userMap.put("userId", userId);
+            userMap.put("username", username);
+
+            roleToUsers.computeIfAbsent(role, k -> new ArrayList<>()).add(userMap);
+        }
+        return roleToUsers;
     }
-    
+//    public Map<Role, List<Map<String, String>>> findEntitlementsForQuiz(String quizId) {
+//        List<ResourceEntitlement> resourceList = resourceEntitlementRepository.findByResourceIdAndResourceType(quizId, ResourceType.QUIZ);
+//        if (resourceList.isEmpty()) {
+//            throw new Error("Entitlement for quiz " + quizId + " cannot be empty");
+//        }
+//
+//        // Extract userIds
+//        List<String> userIds = resourceList.stream()
+//            .map(ResourceEntitlement::getTargetId)
+//            .distinct()
+//            .collect(Collectors.toList());
+//
+//        // Fetch usernames via User Service
+//        String url = userServiceBaseUrl + "/api/user/batch";
+//        Map<String, String> userIdToUsername = restTemplate.postForObject(url, userIds, Map.class);
+//
+//        // Map roles to user details
+//        Map<ResourceEntitlement, String> entitlementToUsername = new HashMap<>();
+//        Map<Role, List<Map<String, String>>> roleToUsers = new HashMap<>();
+//        for (ResourceEntitlement entitlement : resourceList) {
+//        	
+//            Role role = entitlement.getRole();
+//            String userId = entitlement.getTargetId();
+//            String username = userIdToUsername.getOrDefault(userId, "Unknown");
+//            entitlementToUsername.put(entitlement, username);
+//            Map<String, String> userMap = new HashMap<>();
+//            userMap.put("userId", userId);
+//            userMap.put("username", username);
+//
+//            roleToUsers.computeIfAbsent(role, k -> new ArrayList<>()).add(userMap);
+//        }
+//        return roleToUsers;
+//    }
+
 }

@@ -53,9 +53,8 @@ public class LoginController {
     @Transactional  // Ensure both Vault and User are saved or rolled back together
     public ResponseEntity<?> registerUser(@RequestBody User user) {
         // Check if username is already taken
-        System.out.println("Calling register: " + user.getClass() + " for user " + user.getUsername());
+        
         if (userRepository.findByUsername(user.getUsername()).isPresent()) {
-            System.out.println(userRepository.findByUsername(user.getUsername()));
             return ResponseEntity.badRequest().body("Username is already taken.");
         }
 
@@ -65,8 +64,7 @@ public class LoginController {
         vault = vaultRepository.save(vault);  // Save the Vault entry
 
         // Link the Vault entry with the User
-        user.setPasswordVault(vault);
-        System.out.println("New user to save: " + user);
+        user.setPasswordVault(vault);        
 
         // Save the User (this will also persist the Vault due to the transaction)
         userRepository.save(user);
@@ -78,12 +76,10 @@ public class LoginController {
     @PostMapping("/login")
     public ResponseEntity<?> authenticateUser(@RequestBody LoginRequestDTO loginRequest, HttpServletResponse response ) {
         // Authenticate the user
-    	System.out.println("Calling login");
         Authentication authentication = authenticationManager.authenticate(
             new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword())
         );
         if(!authentication.isAuthenticated()) {
-        	System.out.println("User not authenticated");
         	return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Authentication method failed");
         }
         SecurityContextHolder.getContext().setAuthentication(authentication);
@@ -114,7 +110,6 @@ public class LoginController {
     @PostMapping("/logout")
     public ResponseEntity<?> logout(HttpServletResponse response) {
         // Create a cookie with the same name as the JWT token and set it to expire
-    	System.out.println("REQUESTEDS");
         ResponseCookie cookie = ResponseCookie.from("JWT_TOKEN", null)
                 .httpOnly(true)
                 .secure(true)

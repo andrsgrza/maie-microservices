@@ -26,6 +26,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         // Get the JWT token from cookies
+    	System.out.println("Filtering");
         String token = jwtUtil.getTokenFromCookies(request);
         System.out.println("Hi there. tojek : " + token);        
 
@@ -53,7 +54,10 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             } catch (Exception e) {
                 // Log or handle any token validation exceptions
                 logger.warn("JWT validation failed", e);
+                System.out.println("JWT VALIDATION FAILED");
             }
+        } else {
+        	logger.warn("Reveived a null token: " + token);
         }
 
         // Continue with the filter chain
