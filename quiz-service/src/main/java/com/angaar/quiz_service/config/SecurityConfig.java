@@ -4,6 +4,7 @@ import com.angaar.quiz_service.jwt.JwtAuthFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -28,6 +29,7 @@ public class SecurityConfig {
             .authorizeHttpRequests()
             .requestMatchers("/api/quizzes/**").authenticated()  // Protect all quiz endpoints
             .requestMatchers("/api/resource-entitlement/**").authenticated()  // Protect resource-entitlement
+            .requestMatchers(HttpMethod.DELETE, "/api/resource-entitlement/**").permitAll()
             .anyRequest().permitAll()  // Allow all other requests without authentication
             .and()
             .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);  // Stateless for JWT

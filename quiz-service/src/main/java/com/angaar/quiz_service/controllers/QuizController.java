@@ -29,6 +29,7 @@ public class QuizController {
     public ResponseEntity<?> getAllQuizzes(HttpServletRequest request) {
         String token = jwtUtil.getTokenFromCookies(request);
         String userId = jwtUtil.extractId(token);
+        System.out.println("Token: " + token + "\n UserId: " + userId);
 
         // Retrieve quizzes with entitlement information
         List<Object> quizzes = quizService.getAllQuizzesForUser(userId);

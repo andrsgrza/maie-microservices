@@ -56,6 +56,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 logger.warn("JWT validation failed", e);
                 System.out.println("JWT VALIDATION FAILED");
             }
+        } else {
+        	logger.warn("Reveived a null token: " + token);
         }
 
         // Continue with the filter chain

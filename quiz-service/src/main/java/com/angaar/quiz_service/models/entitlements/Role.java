@@ -1,5 +1,6 @@
 package com.angaar.quiz_service.models.entitlements;
 
+
 public enum Role {
 	OWNER(3), READ_WRITE(2), READ_ONLY(1);
 

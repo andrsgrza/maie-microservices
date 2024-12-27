@@ -13,14 +13,14 @@ public class OwnerQuizDTO {
     private String id;
     private String title;
     private Metadata metadata;
-    private Map<Role, List<String>> resourceEntitlement;
+    private Map<Role, List<Map<String, String>>> resourceEntitlement;
     private List<Section> sections;
     
 
     // Constructor
     public OwnerQuizDTO() {this.entitlementRole = Role.OWNER;}
 
-    public OwnerQuizDTO(String id, String title, Metadata metadata, List<Section> sections, Map<Role, List<String>> resouceEntitlement) {
+    public OwnerQuizDTO(String id, String title, Metadata metadata, List<Section> sections, Map<Role, List<Map<String, String>>> resouceEntitlement) {
         this.id = id;
         this.title = title;
         this.metadata = metadata;
@@ -70,12 +70,12 @@ public class OwnerQuizDTO {
 		this.entitlementRole = entitlementRole;
 	}
 
-	public Map<Role, List<String>> getResourceEntitlement() {
+	public Map<Role, List<Map<String, String>>> getResourceEntitlement() {
 		return resourceEntitlement;
 	}
 
-	public void setResourceEntitlement(Map<Role, List<String>> resourceEntitlement) {
-		this.resourceEntitlement = resourceEntitlement;
+	public void setResourceEntitlement(Map<Role, List<Map<String, String>>> map) {
+		this.resourceEntitlement = map;
 	}
 	
     

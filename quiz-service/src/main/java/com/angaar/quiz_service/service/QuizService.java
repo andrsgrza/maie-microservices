@@ -75,9 +75,7 @@ public class QuizService {
         meta.setCreationDate(LocalDate.now().toString());
         quiz.setMetadata(meta);
         Quiz savedQuiz = quizRepository.save(quiz);
-
-        // Assign the owner role to the user for the created quiz
-        resourceService.assignRole(ownerId, ResourceType.QUIZ, quiz.getId(), TargetType.USER, Role.OWNER, false);
+        resourceService.assignUserRoleToQuiz(ownerId, quiz.getId(), Role.OWNER);
 
         return savedQuiz;
     }

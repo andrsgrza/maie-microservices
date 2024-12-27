@@ -1,17 +1,23 @@
 package com.angaar.login_service.controller;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.angaar.login_service.jwt.JwtUtil;
 import com.angaar.login_service.models.User;
+import com.angaar.login_service.models.dto.BasicUserDTO;
 import com.angaar.login_service.models.dto.UserDTO;
 import com.angaar.login_service.repositories.UserRepository;
 
@@ -28,7 +34,7 @@ public class UserController {
 	private JwtUtil jwtUtil;
 	
 	@GetMapping
-	public ResponseEntity<?> getUser(@RequestBody Long userId) {
+	public ResponseEntity<?> getUser(@RequestBody String userId) {
 	    Optional<User> user = userRepository.findById(userId);	    	   
 	    if (user.isPresent()) {
 	        return ResponseEntity.ok(user.get());
@@ -64,4 +70,18 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
         }
     }
+	
+	@PostMapping("/batch")
+	public ResponseEntity<Map<String, String>> getUsernamesByIds(@RequestBody List<String> userIds) {
+	    Map<String, String> userIdToUsername = userRepository.findAllById(userIds).stream()
+	        .collect(Collectors.toMap(User::getId, User::getUsername));
+	    return ResponseEntity.ok(userIdToUsername);
+	}
+	
+	@GetMapping("/search")
+    public ResponseEntity<List<BasicUserDTO>> searchUsernames(@RequestParam String query) {
+        List<BasicUserDTO> usernames = userRepository.findTop10ByUsernameContaining(query);
+        return ResponseEntity.ok(usernames);
+    }
+
 }
